@@ -106,3 +106,28 @@ class Storage:
         with self._connect() as conn:
             rows = conn.execute(query).fetchall()
             return [dict(row) for row in rows]
+
+    def latest_relay_state_by_topic(self) -> dict[str, str]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    json_extract(details_json, '$.topic') AS topic,
+                    json_extract(details_json, '$.payload') AS payload
+                FROM actions_log
+                WHERE action_type = 'wb_mqtt_relay' AND status = 'ok'
+                ORDER BY id DESC
+                """
+            ).fetchall()
+
+        latest: dict[str, str] = {}
+        for row in rows:
+            topic = row["topic"]
+            payload = row["payload"]
+            if topic is None or payload is None:
+                continue
+            topic_key = str(topic)
+            if topic_key in latest:
+                continue
+            latest[topic_key] = str(payload)
+        return latest

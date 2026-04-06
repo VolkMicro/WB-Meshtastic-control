@@ -57,6 +57,16 @@ rules:
         topic: /devices/wb-mr6cv3_92/controls/K2/on
         payload: "0"
 
+  - id: private-status-reply
+    enabled: true
+    match:
+      kind: event
+      source: "!6985212c"
+      event: status_request
+    actions:
+      - type: mesh_status_reply
+        dest: "{{source}}"
+
   # Legacy/test aliases remain enabled for compatibility with prior tests.
   - id: legacy-k1-on
     enabled: true

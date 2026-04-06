@@ -68,6 +68,8 @@ def parse_natural_command_text(raw_text: str, source: str) -> IncomingEnvelope |
         "выключи свет": "light_off",
         "отключи свет": "light_off",
         "включи режим охраны": "guard_mode_on",
+        "статус": "status_request",
+        "status": "status_request",
     }
     event = event_map.get(normalized)
     if event is None:

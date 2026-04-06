@@ -60,11 +60,28 @@ class RuleEngine:
 
     def _render_text(self, template: str, envelope: IncomingEnvelope) -> str:
         text = template
-        values = {"node": envelope.node, **envelope.payload}
+        values = {"node": envelope.node, "source": envelope.source, **envelope.payload}
         for key, value in values.items():
             text = text.replace("{{ " + key + " }}", str(value))
             text = text.replace("{{" + key + "}}", str(value))
         return text
+
+    def _build_status_text(self) -> str:
+        states = self.storage.latest_relay_state_by_topic()
+        boiler_topic = "/devices/wb-mr6cv3_92/controls/K1/on"
+        light_topic = "/devices/wb-mr6cv3_92/controls/K2/on"
+
+        boiler = states.get(boiler_topic)
+        light = states.get(light_topic)
+
+        def to_human(value: str | None) -> str:
+            if value == "1":
+                return "включен"
+            if value == "0":
+                return "выключен"
+            return "неизвестно"
+
+        return f"Статус: бойлер {to_human(boiler)}, свет {to_human(light)}"
 
     def handle_event(self, event_id: int, envelope: IncomingEnvelope) -> None:
         for rule in self.rules:
@@ -77,6 +94,10 @@ class RuleEngine:
                     elif action.type == "mesh_text":
                         text = self._render_text(str(action.params["text"]), envelope)
                         self.mesh_backend.send_text(str(action.params["dest"]), text)
+                    elif action.type == "mesh_status_reply":
+                        dest_template = str(action.params.get("dest", "{{source}}"))
+                        dest = self._render_text(dest_template, envelope)
+                        self.mesh_backend.send_text(dest, self._build_status_text())
                     elif action.type == "meshtastic_gpio":
                         self.mesh_backend.gpio_write(
                             str(action.params["dest"]),
