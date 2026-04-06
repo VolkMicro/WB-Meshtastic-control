@@ -41,6 +41,11 @@ def parse_wbmesh_text(raw_text: str, source: str) -> IncomingEnvelope | None:
     payload_json = _extract_first_json_object(payload_part)
     if payload_json is None:
         return None
+
+    # Some clients send escaped JSON in text payload: {\"kind\":...}
+    if '\\"' in payload_json:
+        payload_json = payload_json.replace('\\"', '"')
+
     try:
         payload = json.loads(payload_json)
     except json.JSONDecodeError:

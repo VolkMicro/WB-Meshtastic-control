@@ -50,7 +50,7 @@ rules:
         payload: "0"
 
   - id: ack-command
-    enabled: true
+    enabled: false
     match:
       kind: event
     actions:
