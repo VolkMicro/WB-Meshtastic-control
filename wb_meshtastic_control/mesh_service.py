@@ -87,6 +87,8 @@ class MeshListener:
         self.rules = rules
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
+        self._last_seen_key: tuple[str, str] | None = None
+        self._last_seen_ts: float = 0.0
 
     def _listen_command(self) -> list[str]:
         # Use absolute path for meshtastic to work reliably in systemd
@@ -94,6 +96,7 @@ class MeshListener:
         command = [
             meshtastic_bin,
             "--listen",
+            "--reply",
             "--seriallog",
             "none",
             "--ch-index",
@@ -160,6 +163,16 @@ class MeshListener:
                         envelope = parse_natural_command_text(raw_text, source)
                     if envelope is None:
                         continue
+
+                    # Meshtastic CLI can print multiple lines for the same received text packet.
+                    # Prevent duplicate execution when identical (source, raw_text) appears in short window.
+                    dedup_key = (envelope.source, envelope.raw_text)
+                    now_ts = time.time()
+                    if self._last_seen_key == dedup_key and (now_ts - self._last_seen_ts) < 2.0:
+                        continue
+                    self._last_seen_key = dedup_key
+                    self._last_seen_ts = now_ts
+
                     event_id = self.storage.insert_event(asdict(envelope))
                     self.rules.handle_event(event_id, envelope)
             except Exception:
