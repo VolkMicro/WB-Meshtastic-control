@@ -164,13 +164,18 @@ class RuleEngine:
                 continue
             for action in rule.actions:
                 try:
+                    log_details = dict(action.params)
                     if action.type == "wb_mqtt_relay":
-                        self.wb_backend.publish(str(action.params["topic"]), str(action.params["payload"]))
+                        topic = str(action.params["topic"])
+                        payload = str(action.params["payload"])
+                        self.wb_backend.publish(topic, payload)
+                        log_details.update({"topic": topic, "payload": payload})
                     elif action.type == "wb_control_switch":
                         control_id = str(action.params["control_id"])
                         state = str(action.params["state"])
                         topic, payload = self._resolve_control_switch(control_id, state)
                         self.wb_backend.publish(topic, payload)
+                        log_details.update({"topic": topic, "payload": payload, "control_id": control_id, "state": state})
                     elif action.type == "mesh_text":
                         text = self._render_text(str(action.params["text"]), envelope)
                         self.mesh_backend.send_text(str(action.params["dest"]), text)
@@ -186,6 +191,6 @@ class RuleEngine:
                         )
                     else:
                         raise ValueError(f"Unsupported action: {action.type}")
-                    self.storage.log_action(event_id, rule.rule_id, action.type, "ok", action.params)
+                    self.storage.log_action(event_id, rule.rule_id, action.type, "ok", log_details)
                 except Exception as exc:
                     self.storage.log_action(event_id, rule.rule_id, action.type, "error", {"error": str(exc), **action.params})
