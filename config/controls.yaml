@@ -1,0 +1,22 @@
+controls:
+  boiler:
+    name: бойлер
+    topic: /devices/wb-mr6cv3_92/controls/K1/on
+    states:
+      on: "1"
+      off: "0"
+    labels:
+      on: включен
+      off: выключен
+      unknown: неизвестно
+
+  light:
+    name: свет
+    topic: /devices/wb-mr6cv3_92/controls/K2/on
+    states:
+      on: "1"
+      off: "0"
+    labels:
+      on: включен
+      off: выключен
+      unknown: неизвестно

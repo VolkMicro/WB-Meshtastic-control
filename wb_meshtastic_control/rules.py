@@ -5,6 +5,7 @@ from typing import Any
 
 import yaml
 
+from wb_meshtastic_control.config import settings
 from wb_meshtastic_control.models import ActionSpec, IncomingEnvelope, RuleSpec
 from wb_meshtastic_control.relay_backends import MeshtasticCommandBackend, WBMqttRelayBackend
 from wb_meshtastic_control.storage import Storage
@@ -16,7 +17,29 @@ class RuleEngine:
         self.storage = storage
         self.wb_backend = WBMqttRelayBackend()
         self.mesh_backend = MeshtasticCommandBackend()
+        self.controls = self._load_controls(settings.controls_path)
         self.rules = self._load_rules()
+
+    def _load_controls(self, controls_path: Path) -> dict[str, dict[str, Any]]:
+        data = yaml.safe_load(controls_path.read_text(encoding="utf-8")) or {}
+        raw_controls = data.get("controls", {})
+        if not isinstance(raw_controls, dict):
+            raise ValueError("controls config must contain a top-level 'controls' mapping")
+        controls: dict[str, dict[str, Any]] = {}
+        for control_id, raw in raw_controls.items():
+            if not isinstance(raw, dict):
+                raise ValueError(f"control '{control_id}' must be a mapping")
+            topic = raw.get("topic")
+            states = raw.get("states")
+            if not topic or not isinstance(states, dict) or not states:
+                raise ValueError(f"control '{control_id}' must define topic and states")
+            controls[str(control_id)] = {
+                "name": str(raw.get("name", control_id)),
+                "topic": str(topic),
+                "states": {str(k): str(v) for k, v in states.items()},
+                "labels": {str(k): str(v) for k, v in dict(raw.get("labels", {})).items()},
+            }
+        return controls
 
     def _load_rules(self) -> list[RuleSpec]:
         data = yaml.safe_load(self.rules_path.read_text(encoding="utf-8")) or {}
@@ -66,22 +89,42 @@ class RuleEngine:
             text = text.replace("{{" + key + "}}", str(value))
         return text
 
+    def _resolve_control_switch(self, control_id: str, state: str) -> tuple[str, str]:
+        control = self.controls.get(control_id)
+        if control is None:
+            raise ValueError(f"Unknown control_id: {control_id}")
+        payload = control["states"].get(state)
+        if payload is None:
+            raise ValueError(f"Unknown state '{state}' for control_id '{control_id}'")
+        return str(control["topic"]), str(payload)
+
     def _build_status_text(self) -> str:
-        states = self.storage.latest_relay_state_by_topic()
-        boiler_topic = "/devices/wb-mr6cv3_92/controls/K1/on"
-        light_topic = "/devices/wb-mr6cv3_92/controls/K2/on"
+        latest_by_topic = self.storage.latest_relay_state_by_topic()
+        parts: list[str] = []
+        for control_id, control in self.controls.items():
+            topic = str(control["topic"])
+            payload = latest_by_topic.get(topic)
+            states_map = control["states"]
+            labels = control.get("labels", {})
 
-        boiler = states.get(boiler_topic)
-        light = states.get(light_topic)
+            state_name = "unknown"
+            if payload is not None:
+                for state_key, state_payload in states_map.items():
+                    if state_payload == payload:
+                        state_name = state_key
+                        break
 
-        def to_human(value: str | None) -> str:
-            if value == "1":
-                return "включен"
-            if value == "0":
-                return "выключен"
-            return "неизвестно"
+            if state_name == "unknown":
+                human_state = str(labels.get("unknown", "неизвестно"))
+            else:
+                human_state = str(labels.get(state_name, state_name))
 
-        return f"Статус: бойлер {to_human(boiler)}, свет {to_human(light)}"
+            display_name = str(control.get("name", control_id))
+            parts.append(f"{display_name} {human_state}")
+
+        if not parts:
+            return "Статус: нет настроенных контролов"
+        return "Статус: " + ", ".join(parts)
 
     def handle_event(self, event_id: int, envelope: IncomingEnvelope) -> None:
         for rule in self.rules:
@@ -91,6 +134,11 @@ class RuleEngine:
                 try:
                     if action.type == "wb_mqtt_relay":
                         self.wb_backend.publish(str(action.params["topic"]), str(action.params["payload"]))
+                    elif action.type == "wb_control_switch":
+                        control_id = str(action.params["control_id"])
+                        state = str(action.params["state"])
+                        topic, payload = self._resolve_control_switch(control_id, state)
+                        self.wb_backend.publish(topic, payload)
                     elif action.type == "mesh_text":
                         text = self._render_text(str(action.params["text"]), envelope)
                         self.mesh_backend.send_text(str(action.params["dest"]), text)

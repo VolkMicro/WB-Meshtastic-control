@@ -58,6 +58,84 @@ meshtastic --port /dev/ttyUSB0 --info
 uvicorn wb_meshtastic_control.api:app --host 0.0.0.0 --port 8091
 ```
 
+## Запуск в Docker Compose (production-ready)
+
+### 1) Подготовка конфигов
+
+```bash
+cp .env.example .env
+cp config/rules.example.yaml config/rules.yaml
+cp config/controls.example.yaml config/controls.yaml
+```
+
+Проверьте в `.env`:
+- `MESHTASTIC_PORT` = путь к устройству внутри контейнера (обычно `/dev/ttyACM0` или `/dev/serial/by-id/...`)
+- `MESHTASTIC_DEVICE` = путь к устройству на хосте (для `devices:` в compose)
+
+### 2) Локальный стенд (встроенный Mosquitto)
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f wb-meshtastic-control
+```
+
+### 3) Wiren Board (использовать MQTT хоста)
+
+На WB обычно уже есть `mosquitto` на хосте, поэтому используйте override с `host network`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.wb.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.wb.yml logs -f wb-meshtastic-control
+```
+
+Проверка:
+- `GET /healthz`
+- `GET /api/events`
+- `GET /api/sensors`
+
+## Масштабирование без правки кода
+
+Чтобы добавить новые реле/каналы, редактируйте только YAML.
+
+### 1) Добавить контрол в `config/controls.yaml`
+
+```yaml
+controls:
+	gate:
+		name: ворота
+		topic: /devices/wb-do4/controls/K3/on
+		states:
+			on: "1"
+			off: "0"
+		labels:
+			on: открыты
+			off: закрыты
+			unknown: неизвестно
+```
+
+### 2) Добавить правило в `config/rules.yaml`
+
+```yaml
+rules:
+	- id: gate-open
+		enabled: true
+		match:
+			kind: event
+			source: "!6985212c"
+			event: gate_on
+		actions:
+			- type: wb_control_switch
+				control_id: gate
+				state: on
+```
+
+Новый action `wb_control_switch` сам берёт topic/payload из `controls.yaml`, поэтому логика единообразная и легче поддерживается на большом доме.
+
+### 3) Статус автоматически масштабируется
+
+Команда `статус` теперь собирается динамически по всем контролам из `controls.yaml`. После добавления нового контрола он попадёт в статус-ответ автоматически.
+
 ## HTTP API
 
 - `GET /healthz`

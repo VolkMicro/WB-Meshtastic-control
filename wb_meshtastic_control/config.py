@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data")
     db_path: Path = Path("./data/meshtastic_control.db")
     rules_path: Path = Path("./config/rules.example.yaml")
+    controls_path: Path = Path("./config/controls.example.yaml")
 
     meshtastic_channel_index: int = 0
     meshtastic_port: str = ""

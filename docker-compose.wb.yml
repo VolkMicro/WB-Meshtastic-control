@@ -1,0 +1,11 @@
+services:
+  wb-meshtastic-control:
+    network_mode: host
+    ports: []
+    environment:
+      WB_MQTT_HOST: ${WB_MQTT_HOST:-127.0.0.1}
+      WB_MQTT_PORT: ${WB_MQTT_PORT:-1883}
+    depends_on: []
+
+  mosquitto:
+    profiles: ["disabled"]
