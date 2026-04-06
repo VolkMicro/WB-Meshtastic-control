@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -36,9 +37,33 @@ class MeshtasticCommandBackend:
             args.extend(["--ble", settings.meshtastic_ble])
         return args
 
-    def send_text(self, dest: str, text: str) -> None:
-        command = [*self._base_args(), "--dest", dest, "--sendtext", text, "--ack"]
-        subprocess.run(command, check=True, timeout=60)
+    def send_text(self, dest: str, text: str, require_ack: bool = True) -> None:
+        command = [*self._base_args(), "--dest", dest, "--sendtext", text]
+        if require_ack:
+            command.append("--ack")
+
+        attempt = subprocess.run(command, check=False, timeout=60, capture_output=True, text=True)
+        if attempt.returncode == 0:
+            return
+
+        stderr = attempt.stderr or ""
+        stdout = attempt.stdout or ""
+        combined = f"{stdout}\n{stderr}"
+        transient_lock = (
+            "serial device couldn't be opened" in combined
+            or "Resource temporarily unavailable" in combined
+            or "Errno 11" in combined
+        )
+
+        if transient_lock:
+            subprocess.run(["pkill", "-f", "/opt/wb-meshtastic-control/venv/bin/meshtastic --listen"], check=False, timeout=5)
+            time.sleep(1.0)
+            retry = subprocess.run(command, check=False, timeout=60, capture_output=True, text=True)
+            if retry.returncode == 0:
+                return
+            raise subprocess.CalledProcessError(retry.returncode, command, output=retry.stdout, stderr=retry.stderr)
+
+        raise subprocess.CalledProcessError(attempt.returncode, command, output=attempt.stdout, stderr=attempt.stderr)
 
     def gpio_write(self, dest: str, gpio: int, value: int) -> None:
         command = [*self._base_args(), "--dest", dest, "--gpio-wrb", str(gpio), str(value)]

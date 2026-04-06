@@ -97,7 +97,7 @@ class RuleEngine:
                     elif action.type == "mesh_status_reply":
                         dest_template = str(action.params.get("dest", "{{source}}"))
                         dest = self._render_text(dest_template, envelope)
-                        self.mesh_backend.send_text(dest, self._build_status_text())
+                        self.mesh_backend.send_text(dest, self._build_status_text(), require_ack=False)
                     elif action.type == "meshtastic_gpio":
                         self.mesh_backend.gpio_write(
                             str(action.params["dest"]),
