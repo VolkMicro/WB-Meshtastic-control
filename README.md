@@ -66,6 +66,7 @@ ls -l /dev/serial/by-id/
 В `.env` выставьте:
 - `MESHTASTIC_DEVICE` = путь устройства на хосте, например `/dev/serial/by-id/usb-Nologo_ProMicro_compatible_nRF52840_DA498B180B749DA8-if00`
 - `MESHTASTIC_PORT` = тот же путь (он мапится внутрь контейнера один-в-один)
+- `MESHTASTIC_BIN` = путь к CLI; **для Docker оставьте `meshtastic` (по умолчанию)**, для systemd укажите `/opt/wb-meshtastic-control/venv/bin/meshtastic`
 
 ### 4) Настройка приватного источника команд
 
@@ -99,7 +100,7 @@ docker compose -f docker-compose.yml -f docker-compose.wb.yml logs --tail=200 wb
 ```bash
 ls -l /dev/serial/by-id/
 docker compose -f docker-compose.yml -f docker-compose.wb.yml exec wb-meshtastic-control \
-	sh -lc '/opt/wb-meshtastic-control/venv/bin/meshtastic --port "$MESHTASTIC_PORT" --info'
+	sh -lc 'meshtastic --port "$MESHTASTIC_PORT" --info'
 ```
 
 ### Проверка API

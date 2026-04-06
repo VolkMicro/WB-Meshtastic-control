@@ -93,8 +93,7 @@ class MeshListener:
         self._last_seen_ts: float = 0.0
 
     def _listen_command(self) -> list[str]:
-        # Use absolute path for meshtastic to work reliably in systemd
-        meshtastic_bin = "/opt/wb-meshtastic-control/venv/bin/meshtastic"
+        meshtastic_bin = settings.meshtastic_bin
         command = [
             meshtastic_bin,
             "--listen",

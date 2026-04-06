@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     rules_path: Path = Path("./config/rules.example.yaml")
     controls_path: Path = Path("./config/controls.example.yaml")
 
+    meshtastic_bin: str = "meshtastic"
     meshtastic_channel_index: int = 0
     meshtastic_port: str = ""
     meshtastic_host: str = ""

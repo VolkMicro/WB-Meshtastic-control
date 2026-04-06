@@ -28,7 +28,7 @@ class WBMqttRelayBackend:
 
 class MeshtasticCommandBackend:
     def _base_args(self) -> list[str]:
-        args = ["/opt/wb-meshtastic-control/venv/bin/meshtastic", "--ch-index", str(settings.meshtastic_channel_index)]
+        args = [settings.meshtastic_bin, "--ch-index", str(settings.meshtastic_channel_index)]
         if settings.meshtastic_port:
             args.extend(["--port", settings.meshtastic_port])
         elif settings.meshtastic_host:
@@ -56,7 +56,7 @@ class MeshtasticCommandBackend:
         )
 
         if transient_lock:
-            subprocess.run(["pkill", "-f", "/opt/wb-meshtastic-control/venv/bin/meshtastic --listen"], check=False, timeout=5)
+            subprocess.run(["pkill", "-f", f"{settings.meshtastic_bin} --listen"], check=False, timeout=5)
             time.sleep(1.0)
             retry = subprocess.run(command, check=False, timeout=60, capture_output=True, text=True)
             if retry.returncode == 0:
