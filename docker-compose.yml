@@ -14,8 +14,8 @@ services:
       WB_MQTT_HOST: ${WB_MQTT_HOST:-mosquitto}
       WB_MQTT_PORT: ${WB_MQTT_PORT:-1883}
       MESHTASTIC_PORT: ${MESHTASTIC_PORT:-/dev/ttyACM0}
-      RULES_PATH: ${RULES_PATH:-./config/rules.example.yaml}
-      CONTROLS_PATH: ${CONTROLS_PATH:-./config/controls.example.yaml}
+      RULES_PATH: ${RULES_PATH:-./config/rules.yaml}
+      CONTROLS_PATH: ${CONTROLS_PATH:-./config/controls.yaml}
     ports:
       - "8091:8091"
     devices:
@@ -24,8 +24,6 @@ services:
       - ./data:/app/data
       - ./config:/app/config
       - /dev/serial:/dev/serial
-    depends_on:
-      - mosquitto
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/healthz', timeout=5)"]
       interval: 15s
