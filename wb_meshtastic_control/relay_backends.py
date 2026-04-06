@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import time
@@ -66,6 +67,26 @@ class WBMqttRelayBackend:
 
 
 class MeshtasticCommandBackend:
+    def _terminate_listener_processes(self) -> None:
+        current_pid = os.getpid()
+        for entry in os.scandir("/proc"):
+            if not entry.name.isdigit():
+                continue
+            pid = int(entry.name)
+            if pid == current_pid:
+                continue
+            cmdline_path = f"/proc/{pid}/cmdline"
+            try:
+                with open(cmdline_path, "rb") as fh:
+                    cmdline = fh.read().decode("utf-8", errors="ignore")
+            except OSError:
+                continue
+            if "meshtastic" in cmdline and "--listen" in cmdline:
+                try:
+                    os.kill(pid, 15)
+                except OSError:
+                    continue
+
     def _base_args(self) -> list[str]:
         args = [settings.meshtastic_bin, "--ch-index", str(settings.meshtastic_channel_index)]
         if settings.meshtastic_port:
@@ -98,6 +119,8 @@ class MeshtasticCommandBackend:
             pkill_bin = shutil.which("pkill")
             if pkill_bin:
                 subprocess.run([pkill_bin, "-f", f"{settings.meshtastic_bin} --listen"], check=False, timeout=5)
+            else:
+                self._terminate_listener_processes()
             time.sleep(1.0)
             retry = subprocess.run(command, check=False, timeout=60, capture_output=True, text=True)
             if retry.returncode == 0:
