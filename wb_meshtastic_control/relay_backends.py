@@ -14,9 +14,15 @@ class WBMqttRelayBackend:
         if settings.wb_mqtt_username:
             client.username_pw_set(settings.wb_mqtt_username, settings.wb_mqtt_password)
         client.connect(settings.wb_mqtt_host, settings.wb_mqtt_port, keepalive=10)
-        result = client.publish(topic, payload=payload, qos=1, retain=False)
-        result.wait_for_publish()
-        client.disconnect()
+        client.loop_start()
+        try:
+            result = client.publish(topic, payload=payload, qos=1, retain=False)
+            result.wait_for_publish(timeout=5)
+            if not result.is_published():
+                raise TimeoutError(f"MQTT publish timeout for topic {topic}")
+        finally:
+            client.loop_stop()
+            client.disconnect()
 
 
 class MeshtasticCommandBackend:
