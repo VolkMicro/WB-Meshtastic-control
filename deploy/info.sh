@@ -1,0 +1,23 @@
+#!/bin/bash
+# Quick info about WB Meshtastic Control deployment
+
+echo "WB Meshtastic Control Info"
+echo "=========================="
+echo ""
+echo "Installation path: /opt/wb-meshtastic-control"
+echo "Python venv: /opt/wb-meshtastic-control/venv"
+echo "Data (SQLite): /opt/wb-meshtastic-control/data/meshtastic_control.db"
+echo "Config: /opt/wb-meshtastic-control/.env"
+echo "Rules: /opt/wb-meshtastic-control/config/rules.example.yaml"
+echo ""
+echo "Service status:"
+systemctl status wb-meshtastic --no-pager || echo "(not running)"
+echo ""
+echo "Recent logs:"
+journalctl -u wb-meshtastic -n 20 --no-pager || echo "(no logs)"
+echo ""
+echo "API endpoint:"
+echo "  http://127.0.0.1:8091/healthz"
+echo "  http://127.0.0.1:8091/api/events"
+echo "  http://127.0.0.1:8091/api/sensors"
+echo ""

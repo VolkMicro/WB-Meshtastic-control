@@ -21,7 +21,7 @@ class WBMqttRelayBackend:
 
 class MeshtasticCommandBackend:
     def _base_args(self) -> list[str]:
-        args = ["meshtastic", "--ch-index", str(settings.meshtastic_channel_index)]
+        args = ["/opt/wb-meshtastic-control/venv/bin/meshtastic", "--ch-index", str(settings.meshtastic_channel_index)]
         if settings.meshtastic_port:
             args.extend(["--port", settings.meshtastic_port])
         elif settings.meshtastic_host:

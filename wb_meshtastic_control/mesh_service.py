@@ -34,7 +34,9 @@ class MeshListener:
         self._stop = threading.Event()
 
     def _listen_command(self) -> list[str]:
-        command = ["meshtastic", "--listen", "--seriallog", "none", "--ch-index", str(settings.meshtastic_channel_index)]
+        # Use absolute path for meshtastic to work reliably in systemd
+        meshtastic_bin = "/opt/wb-meshtastic-control/venv/bin/meshtastic"
+        command = [meshtastic_bin, "--listen", "--seriallog", "none", "--ch-index", str(settings.meshtastic_channel_index)]
         if settings.meshtastic_port:
             command.extend(["--port", settings.meshtastic_port])
         elif settings.meshtastic_host:
