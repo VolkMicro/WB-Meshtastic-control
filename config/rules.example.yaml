@@ -9,11 +9,41 @@ rules:
         topic: /devices/wb-mr6cv3_92/controls/K1/on
         payload: "1"
 
+  - id: k1-on-alias
+    enabled: true
+    match:
+      kind: event
+      event: stop_pump
+    actions:
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K1/on
+        payload: "1"
+
+  - id: k1-on-short
+    enabled: true
+    match:
+      kind: event
+      event: on
+    actions:
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K1/on
+        payload: "1"
+
   - id: k1-off
     enabled: true
     match:
       kind: event
       event: k1_off
+    actions:
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K1/on
+        payload: "0"
+
+  - id: k1-off-short
+    enabled: true
+    match:
+      kind: event
+      event: off
     actions:
       - type: wb_mqtt_relay
         topic: /devices/wb-mr6cv3_92/controls/K1/on
