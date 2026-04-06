@@ -56,6 +56,29 @@ def parse_wbmesh_text(raw_text: str, source: str) -> IncomingEnvelope | None:
     return IncomingEnvelope(kind=kind, node=node, payload=payload, raw_text=raw_text, source=source)
 
 
+def parse_natural_command_text(raw_text: str, source: str) -> IncomingEnvelope | None:
+    normalized = " ".join(raw_text.lower().strip().split())
+    event_map = {
+        "включи бойлер": "boiler_on",
+        "выключи бойлер": "boiler_off",
+        "отключи бойлер": "boiler_off",
+        "включи свет": "light_on",
+        "выключи свет": "light_off",
+        "отключи свет": "light_off",
+        "включи режим охраны": "guard_mode_on",
+    }
+    event = event_map.get(normalized)
+    if event is None:
+        return None
+    payload = {
+        "kind": "event",
+        "event": event,
+        "value": 1,
+        "command_text": raw_text,
+    }
+    return IncomingEnvelope(kind="event", node=source or "unknown", payload=payload, raw_text=raw_text, source=source)
+
+
 class MeshListener:
     def __init__(self, storage: Storage, rules: RuleEngine) -> None:
         self.storage = storage
@@ -66,7 +89,15 @@ class MeshListener:
     def _listen_command(self) -> list[str]:
         # Use absolute path for meshtastic to work reliably in systemd
         meshtastic_bin = "/opt/wb-meshtastic-control/venv/bin/meshtastic"
-        command = [meshtastic_bin, "--listen", "--seriallog", "none", "--ch-index", str(settings.meshtastic_channel_index)]
+        command = [
+            meshtastic_bin,
+            "--listen",
+            "--reply",
+            "--seriallog",
+            "none",
+            "--ch-index",
+            str(settings.meshtastic_channel_index),
+        ]
         if settings.meshtastic_port:
             command.extend(["--port", settings.meshtastic_port])
         elif settings.meshtastic_host:
@@ -114,6 +145,8 @@ class MeshListener:
                         continue
                     raw_text, source = record
                     envelope = parse_wbmesh_text(raw_text, source)
+                    if envelope is None:
+                        envelope = parse_natural_command_text(raw_text, source)
                     if envelope is None:
                         continue
                     event_id = self.storage.insert_event(asdict(envelope))

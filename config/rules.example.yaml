@@ -1,5 +1,59 @@
 rules:
-  - id: k1-on
+  - id: boiler-on
+    enabled: true
+    match:
+      kind: event
+      event: boiler_on
+    actions:
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K1/on
+        payload: "1"
+
+  - id: boiler-off
+    enabled: true
+    match:
+      kind: event
+      event: boiler_off
+    actions:
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K1/on
+        payload: "0"
+
+  - id: light-on
+    enabled: true
+    match:
+      kind: event
+      event: light_on
+    actions:
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K2/on
+        payload: "1"
+
+  - id: light-off
+    enabled: true
+    match:
+      kind: event
+      event: light_off
+    actions:
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K2/on
+        payload: "0"
+
+  - id: guard-mode-on
+    enabled: true
+    match:
+      kind: event
+      event: guard_mode_on
+    actions:
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K1/on
+        payload: "0"
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K2/on
+        payload: "0"
+
+  # Legacy/test aliases remain enabled for compatibility with prior tests.
+  - id: legacy-k1-on
     enabled: true
     match:
       kind: event
@@ -9,27 +63,7 @@ rules:
         topic: /devices/wb-mr6cv3_92/controls/K1/on
         payload: "1"
 
-  - id: k1-on-alias
-    enabled: true
-    match:
-      kind: event
-      event: stop_pump
-    actions:
-      - type: wb_mqtt_relay
-        topic: /devices/wb-mr6cv3_92/controls/K1/on
-        payload: "1"
-
-  - id: k1-on-short
-    enabled: true
-    match:
-      kind: event
-      event: on
-    actions:
-      - type: wb_mqtt_relay
-        topic: /devices/wb-mr6cv3_92/controls/K1/on
-        payload: "1"
-
-  - id: k1-off
+  - id: legacy-k1-off
     enabled: true
     match:
       kind: event
@@ -39,21 +73,12 @@ rules:
         topic: /devices/wb-mr6cv3_92/controls/K1/on
         payload: "0"
 
-  - id: k1-off-short
+  - id: legacy-stop-pump
     enabled: true
     match:
       kind: event
-      event: off
+      event: stop_pump
     actions:
       - type: wb_mqtt_relay
         topic: /devices/wb-mr6cv3_92/controls/K1/on
-        payload: "0"
-
-  - id: ack-command
-    enabled: false
-    match:
-      kind: event
-    actions:
-      - type: mesh_text
-        dest: "^all"
-        text: "Command received: {{ event }}"
+        payload: "1"
