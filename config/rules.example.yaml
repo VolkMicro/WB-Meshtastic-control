@@ -1,28 +1,29 @@
 rules:
-  - id: leak-alarm
+  - id: k1-on
     enabled: true
     match:
-      kind: sensor
-      source: "!212c"
-      sensor: water_leak
-      equals: 1
+      kind: event
+      event: k1_on
     actions:
       - type: wb_mqtt_relay
         topic: /devices/wb-mr6cv3_92/controls/K1/on
         payload: "1"
-      - type: mesh_text
-        dest: "!212c"
-        text: "Leak alarm from {{ node }}"
 
-  - id: remote-pump-stop
+  - id: k1-off
     enabled: true
     match:
       kind: event
-      source: "!212c"
-      event: stop_pump
-      equals: 1
+      event: k1_off
     actions:
-      - type: meshtastic_gpio
-        dest: "!212c"
-        gpio: 4
-        value: 0
+      - type: wb_mqtt_relay
+        topic: /devices/wb-mr6cv3_92/controls/K1/on
+        payload: "0"
+
+  - id: ack-command
+    enabled: true
+    match:
+      kind: event
+    actions:
+      - type: mesh_text
+        dest: "^all"
+        text: "Command received: {{ event }}"
