@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import subprocess
 import threading
 import time
@@ -46,16 +47,27 @@ class MeshListener:
         return command
 
     def _extract_text(self, line: str) -> tuple[str, str] | None:
+        # Primary format: JSON packet (when CLI emits structured events)
         try:
             packet = json.loads(line)
         except json.JSONDecodeError:
+            packet = None
+
+        if packet is not None:
+            decoded = packet.get("decoded") or {}
+            text = decoded.get("text")
+            if text:
+                source = str(packet.get("fromId") or packet.get("from") or "unknown")
+                return str(text), source
+
+        # Fallback format: human-readable CLI lines, extract embedded WBMESH payload.
+        marker = "WBMESH "
+        if marker not in line:
             return None
-        decoded = packet.get("decoded") or {}
-        text = decoded.get("text")
-        if not text:
-            return None
-        source = str(packet.get("fromId") or packet.get("from") or "unknown")
-        return str(text), source
+        raw_text = line[line.index(marker) :].strip()
+        match = re.search(r"(![0-9a-fA-F]+)", line)
+        source = match.group(1) if match else "unknown"
+        return raw_text, source
 
     def run_forever(self) -> None:
         while not self._stop.is_set():
