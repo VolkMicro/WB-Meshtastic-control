@@ -18,10 +18,34 @@ from wb_meshtastic_control.storage import Storage
 LOGGER = logging.getLogger("wb-meshtastic-control")
 
 
+def _extract_first_json_object(text: str) -> str | None:
+    start = text.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    for idx in range(start, len(text)):
+        char = text[idx]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : idx + 1]
+    return None
+
+
 def parse_wbmesh_text(raw_text: str, source: str) -> IncomingEnvelope | None:
     if not raw_text.startswith("WBMESH "):
         return None
-    payload = json.loads(raw_text.removeprefix("WBMESH ").strip())
+    payload_part = raw_text.removeprefix("WBMESH ").strip()
+    payload_json = _extract_first_json_object(payload_part)
+    if payload_json is None:
+        return None
+    try:
+        payload = json.loads(payload_json)
+    except json.JSONDecodeError:
+        LOGGER.warning("Invalid WBMESH payload from %s: %s", source, raw_text)
+        return None
     kind = str(payload.get("kind", "unknown"))
     node = str(payload.get("node", source or "unknown"))
     return IncomingEnvelope(kind=kind, node=node, payload=payload, raw_text=raw_text, source=source)
