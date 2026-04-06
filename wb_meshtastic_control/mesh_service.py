@@ -166,7 +166,7 @@ class MeshListener:
 
                     # Meshtastic CLI can print multiple lines for the same received text packet.
                     # Prevent duplicate execution when identical (source, raw_text) appears in short window.
-                    dedup_key = (envelope.source, envelope.raw_text)
+                    dedup_key = ("msg", envelope.raw_text)
                     now_ts = time.time()
                     if self._last_seen_key == dedup_key and (now_ts - self._last_seen_ts) < 2.0:
                         continue
