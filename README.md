@@ -63,10 +63,40 @@ mkdir -p data
 ls -l /dev/serial/by-id/
 ```
 
-В `.env` выставьте:
-- `MESHTASTIC_DEVICE` = путь устройства на хосте, например `/dev/serial/by-id/usb-Nologo_ProMicro_compatible_nRF52840_DA498B180B749DA8-if00`
-- `MESHTASTIC_PORT` = тот же путь (он мапится внутрь контейнера один-в-один)
-- `MESHTASTIC_BIN` = путь к CLI; **для Docker оставьте `meshtastic` (по умолчанию)**, для systemd укажите `/opt/wb-meshtastic-control/venv/bin/meshtastic`
+Вывод будет примерно такой:
+```
+lrwxrwxrwx 1 root root 13 Apr  6 16:12 usb-Nologo_ProMicro_...-if00 -> ../../ttyACM0
+```
+
+> **ВАЖНО:** в `.env` нужен **полный путь**, не только имя файла из вывода `ls`.
+>
+> ❌ Типичная ошибка (только имя файла — НЕ РАБОТАЕТ):
+> ```
+> MESHTASTIC_PORT=usb-Nologo_ProMicro_compatible_nRF52840_DA498B180B749DA8-if00
+> ```
+>
+> ✅ Вариант 1 — через by-id (стабильнее, не меняется при перезагрузке):
+> ```
+> MESHTASTIC_PORT=/dev/serial/by-id/usb-Nologo_ProMicro_compatible_nRF52840_DA498B180B749DA8-if00
+> MESHTASTIC_DEVICE=/dev/serial/by-id/usb-Nologo_ProMicro_compatible_nRF52840_DA498B180B749DA8-if00
+> ```
+>
+> ✅ Вариант 2 — через ttyACMx (проще, может сменить номер после перезагрузки):
+> ```
+> MESHTASTIC_PORT=/dev/ttyACM0
+> MESHTASTIC_DEVICE=/dev/ttyACM0
+> ```
+
+Узнать реальный ttyACMx из симлинка:
+```bash
+readlink -f /dev/serial/by-id/<имя_вашего_устройства>
+# пример вывода: /dev/ttyACM0
+```
+
+После редактирования `.env` проверьте — оба значения должны начинаться с `/dev/`:
+```bash
+grep MESHTASTIC /opt/wb-meshtastic-control/.env
+```
 
 ### 4) Настройка приватного источника команд
 
