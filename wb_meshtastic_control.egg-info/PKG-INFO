@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: wb-meshtastic-control
+Version: 0.1.0
+Summary: Meshtastic-backed control and telemetry bridge for Wiren Board
+Requires-Python: >=3.11
+Requires-Dist: fastapi==0.115.12
+Requires-Dist: uvicorn==0.34.0
+Requires-Dist: pydantic-settings==2.8.1
+Requires-Dist: PyYAML==6.0.2
+Requires-Dist: paho-mqtt==2.1.0

@@ -1,0 +1,19 @@
+[project]
+name = "wb-meshtastic-control"
+version = "0.1.0"
+description = "Meshtastic-backed control and telemetry bridge for Wiren Board"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.115.12",
+  "uvicorn==0.34.0",
+  "pydantic-settings==2.8.1",
+  "PyYAML==6.0.2",
+  "paho-mqtt==2.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["wb_meshtastic_control"]
