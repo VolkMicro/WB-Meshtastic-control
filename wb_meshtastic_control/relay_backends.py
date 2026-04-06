@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import time
+import threading
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -24,6 +25,43 @@ class WBMqttRelayBackend:
         finally:
             client.loop_stop()
             client.disconnect()
+
+    def read_values(self, topics: list[str], timeout_sec: float = 2.0) -> dict[str, str]:
+        if not topics:
+            return {}
+
+        collected: dict[str, str] = {}
+        expected = set(topics)
+        done = threading.Event()
+
+        def on_connect(client: mqtt.Client, userdata: Any, flags: dict[str, Any], reason_code: int, properties: Any) -> None:
+            if reason_code != 0:
+                done.set()
+                return
+            for topic in topics:
+                client.subscribe(topic, qos=0)
+
+        def on_message(client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
+            topic = str(msg.topic)
+            payload = msg.payload.decode("utf-8", errors="replace")
+            if topic not in collected:
+                collected[topic] = payload
+            if expected.issubset(collected.keys()):
+                done.set()
+
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        if settings.wb_mqtt_username:
+            client.username_pw_set(settings.wb_mqtt_username, settings.wb_mqtt_password)
+        client.on_connect = on_connect
+        client.on_message = on_message
+        client.connect(settings.wb_mqtt_host, settings.wb_mqtt_port, keepalive=10)
+        client.loop_start()
+        try:
+            done.wait(timeout_sec)
+        finally:
+            client.loop_stop()
+            client.disconnect()
+        return collected
 
 
 class MeshtasticCommandBackend:

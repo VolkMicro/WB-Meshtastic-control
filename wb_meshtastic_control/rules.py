@@ -31,14 +31,24 @@ class RuleEngine:
                 raise ValueError(f"control '{control_id}' must be a mapping")
             topic = raw.get("topic")
             states = raw.get("states")
-            if not topic or not isinstance(states, dict) or not states:
-                raise ValueError(f"control '{control_id}' must define topic and states")
-            controls[str(control_id)] = {
+            if not topic:
+                raise ValueError(f"control '{control_id}' must define topic")
+
+            control: dict[str, Any] = {
                 "name": str(raw.get("name", control_id)),
                 "topic": str(topic),
-                "states": {str(k): str(v) for k, v in states.items()},
                 "labels": {str(k): str(v) for k, v in dict(raw.get("labels", {})).items()},
             }
+
+            if isinstance(states, dict) and states:
+                control["kind"] = "switch"
+                control["states"] = {str(k): str(v) for k, v in states.items()}
+            else:
+                control["kind"] = "value"
+                control["unit"] = str(raw.get("unit", ""))
+                control["precision"] = int(raw.get("precision", 1))
+
+            controls[str(control_id)] = control
         return controls
 
     def _load_rules(self) -> list[RuleSpec]:
@@ -100,27 +110,49 @@ class RuleEngine:
 
     def _build_status_text(self) -> str:
         latest_by_topic = self.storage.latest_relay_state_by_topic()
+        value_controls: list[tuple[str, dict[str, Any]]] = [
+            (control_id, control) for control_id, control in self.controls.items() if control.get("kind") == "value"
+        ]
+        value_topics = [str(control["topic"]) for _, control in value_controls]
+        latest_values_by_topic = self.wb_backend.read_values(value_topics, timeout_sec=2.0)
+
         parts: list[str] = []
         for control_id, control in self.controls.items():
             topic = str(control["topic"])
-            payload = latest_by_topic.get(topic)
-            states_map = control["states"]
-            labels = control.get("labels", {})
-
-            state_name = "unknown"
-            if payload is not None:
-                for state_key, state_payload in states_map.items():
-                    if state_payload == payload:
-                        state_name = state_key
-                        break
-
-            if state_name == "unknown":
-                human_state = str(labels.get("unknown", "неизвестно"))
-            else:
-                human_state = str(labels.get(state_name, state_name))
-
             display_name = str(control.get("name", control_id))
-            parts.append(f"{display_name} {human_state}")
+
+            if control.get("kind") == "switch":
+                payload = latest_by_topic.get(topic)
+                states_map = control["states"]
+                labels = control.get("labels", {})
+
+                state_name = "unknown"
+                if payload is not None:
+                    for state_key, state_payload in states_map.items():
+                        if state_payload == payload:
+                            state_name = state_key
+                            break
+
+                if state_name == "unknown":
+                    human_state = str(labels.get("unknown", "неизвестно"))
+                else:
+                    human_state = str(labels.get(state_name, state_name))
+                parts.append(f"{display_name} {human_state}")
+                continue
+
+            raw_value = latest_values_by_topic.get(topic)
+            if raw_value is None:
+                parts.append(f"{display_name} неизвестно")
+                continue
+
+            precision = int(control.get("precision", 1))
+            unit = str(control.get("unit", ""))
+            try:
+                rendered = f"{float(raw_value):.{precision}f}"
+            except ValueError:
+                rendered = str(raw_value)
+            suffix = f" {unit}" if unit else ""
+            parts.append(f"{display_name} {rendered}{suffix}")
 
         if not parts:
             return "Статус: нет настроенных контролов"

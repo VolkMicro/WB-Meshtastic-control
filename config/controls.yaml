@@ -20,3 +20,21 @@ controls:
       on: включен
       off: выключен
       unknown: неизвестно
+
+  climate_temperature:
+    name: температура
+    topic: /devices/wb-msw-v4_202/controls/Temperature
+    unit: "°C"
+    precision: 1
+
+  climate_humidity:
+    name: влажность
+    topic: /devices/wb-msw-v4_202/controls/Humidity
+    unit: "%"
+    precision: 1
+
+  climate_co2:
+    name: CO2
+    topic: /devices/wb-msw-v4_202/controls/CO2
+    unit: ppm
+    precision: 0

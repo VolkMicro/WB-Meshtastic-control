@@ -115,7 +115,7 @@ class Storage:
                     json_extract(details_json, '$.topic') AS topic,
                     json_extract(details_json, '$.payload') AS payload
                 FROM actions_log
-                WHERE action_type = 'wb_mqtt_relay' AND status = 'ok'
+                WHERE action_type IN ('wb_mqtt_relay', 'wb_control_switch') AND status = 'ok'
                 ORDER BY id DESC
                 """
             ).fetchall()
