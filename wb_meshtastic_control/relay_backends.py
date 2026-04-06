@@ -67,6 +67,14 @@ class WBMqttRelayBackend:
 
 
 class MeshtasticCommandBackend:
+    @staticmethod
+    def _is_transient_lock_error(text: str) -> bool:
+        return (
+            "serial device couldn't be opened" in text
+            or "Resource temporarily unavailable" in text
+            or "Errno 11" in text
+        )
+
     def _terminate_listener_processes(self) -> None:
         current_pid = os.getpid()
         for entry in os.scandir("/proc"):
@@ -109,11 +117,7 @@ class MeshtasticCommandBackend:
         stderr = attempt.stderr or ""
         stdout = attempt.stdout or ""
         combined = f"{stdout}\n{stderr}"
-        transient_lock = (
-            "serial device couldn't be opened" in combined
-            or "Resource temporarily unavailable" in combined
-            or "Errno 11" in combined
-        )
+        transient_lock = self._is_transient_lock_error(combined)
 
         if transient_lock:
             pkill_bin = shutil.which("pkill")
@@ -121,11 +125,25 @@ class MeshtasticCommandBackend:
                 subprocess.run([pkill_bin, "-f", f"{settings.meshtastic_bin} --listen"], check=False, timeout=5)
             else:
                 self._terminate_listener_processes()
-            time.sleep(1.0)
-            retry = subprocess.run(command, check=False, timeout=60, capture_output=True, text=True)
-            if retry.returncode == 0:
-                return
-            raise subprocess.CalledProcessError(retry.returncode, command, output=retry.stdout, stderr=retry.stderr)
+
+            last_retry: subprocess.CompletedProcess[str] | None = None
+            for _ in range(3):
+                time.sleep(1.5)
+                retry = subprocess.run(command, check=False, timeout=60, capture_output=True, text=True)
+                if retry.returncode == 0:
+                    return
+                retry_text = f"{retry.stdout or ''}\n{retry.stderr or ''}"
+                last_retry = retry
+                if not self._is_transient_lock_error(retry_text):
+                    break
+
+            if last_retry is not None:
+                raise subprocess.CalledProcessError(
+                    last_retry.returncode,
+                    command,
+                    output=last_retry.stdout,
+                    stderr=last_retry.stderr,
+                )
 
         raise subprocess.CalledProcessError(attempt.returncode, command, output=attempt.stdout, stderr=attempt.stderr)
 
