@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 import time
 import threading
@@ -94,7 +95,9 @@ class MeshtasticCommandBackend:
         )
 
         if transient_lock:
-            subprocess.run(["pkill", "-f", f"{settings.meshtastic_bin} --listen"], check=False, timeout=5)
+            pkill_bin = shutil.which("pkill")
+            if pkill_bin:
+                subprocess.run([pkill_bin, "-f", f"{settings.meshtastic_bin} --listen"], check=False, timeout=5)
             time.sleep(1.0)
             retry = subprocess.run(command, check=False, timeout=60, capture_output=True, text=True)
             if retry.returncode == 0:
