@@ -96,7 +96,6 @@ class MeshListener:
         command = [
             meshtastic_bin,
             "--listen",
-            "--reply",
             "--seriallog",
             "none",
             "--ch-index",

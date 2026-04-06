@@ -3,6 +3,7 @@ rules:
     enabled: true
     match:
       kind: event
+      source: "!6985212c"
       event: boiler_on
     actions:
       - type: wb_mqtt_relay
@@ -13,6 +14,7 @@ rules:
     enabled: true
     match:
       kind: event
+      source: "!6985212c"
       event: boiler_off
     actions:
       - type: wb_mqtt_relay
@@ -23,6 +25,7 @@ rules:
     enabled: true
     match:
       kind: event
+      source: "!6985212c"
       event: light_on
     actions:
       - type: wb_mqtt_relay
@@ -33,6 +36,7 @@ rules:
     enabled: true
     match:
       kind: event
+      source: "!6985212c"
       event: light_off
     actions:
       - type: wb_mqtt_relay
@@ -43,6 +47,7 @@ rules:
     enabled: true
     match:
       kind: event
+      source: "!6985212c"
       event: guard_mode_on
     actions:
       - type: wb_mqtt_relay
@@ -57,6 +62,7 @@ rules:
     enabled: true
     match:
       kind: event
+      source: "!6985212c"
       event: k1_on
     actions:
       - type: wb_mqtt_relay
@@ -67,6 +73,7 @@ rules:
     enabled: true
     match:
       kind: event
+      source: "!6985212c"
       event: k1_off
     actions:
       - type: wb_mqtt_relay
@@ -77,6 +84,7 @@ rules:
     enabled: true
     match:
       kind: event
+      source: "!6985212c"
       event: stop_pump
     actions:
       - type: wb_mqtt_relay
