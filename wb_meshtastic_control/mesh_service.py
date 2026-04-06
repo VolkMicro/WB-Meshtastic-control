@@ -57,7 +57,9 @@ def parse_wbmesh_text(raw_text: str, source: str) -> IncomingEnvelope | None:
 
 
 def parse_natural_command_text(raw_text: str, source: str) -> IncomingEnvelope | None:
-    normalized = " ".join(raw_text.lower().strip().split())
+    normalized = raw_text.lower().strip()
+    normalized = re.sub(r"[!?.,;:]+", " ", normalized)
+    normalized = " ".join(normalized.split())
     event_map = {
         "включи бойлер": "boiler_on",
         "выключи бойлер": "boiler_off",
@@ -92,7 +94,6 @@ class MeshListener:
         command = [
             meshtastic_bin,
             "--listen",
-            "--reply",
             "--seriallog",
             "none",
             "--ch-index",
@@ -119,6 +120,16 @@ class MeshListener:
             if text:
                 source = str(packet.get("fromId") or packet.get("from") or "unknown")
                 return str(text), source
+
+        # Secondary format: python-dict-like event line with text field.
+        # Example contains fragments like: 'fromId': '!6985212c', ... 'text': 'включи бойлер'
+        text_match = re.search(r"['\"]text['\"]\s*:\s*['\"](.+?)['\"]", line)
+        if text_match:
+            text = text_match.group(1)
+            text = text.replace("\\\"", '"').replace("\\'", "'")
+            source_match = re.search(r"![0-9a-fA-F]+", line)
+            source = source_match.group(0) if source_match else "unknown"
+            return text, source
 
         # Fallback format: human-readable CLI lines, extract embedded WBMESH payload.
         marker = "WBMESH "
