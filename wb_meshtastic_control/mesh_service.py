@@ -166,8 +166,10 @@ class MeshListener:
                     if self._stop.is_set():
                         process.terminate()
                         break
-                    LOGGER.debug("Meshtastic line: %s", line.strip())
-                    record = self._extract_text(line.strip())
+                    line_str = line.strip()
+                    if line_str:  # Log all non-empty lines from meshtastic
+                        LOGGER.debug("Meshtastic raw output: %s", line_str)
+                    record = self._extract_text(line_str)
                     if record is None:
                         continue
                     raw_text, source = record
