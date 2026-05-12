@@ -150,14 +150,28 @@ class MeshListener:
             try:
                 process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
                 assert process.stdout is not None
+                LOGGER.info("Meshtastic process started with PID: %s", process.pid)
+
+                # Check if process is still running after a short delay
+                time.sleep(2)
+                if process.poll() is not None:
+                    LOGGER.error("Meshtastic process exited immediately with code: %s", process.returncode)
+                    # Read any error output
+                    output = process.stdout.read()
+                    if output:
+                        LOGGER.error("Meshtastic output: %s", output.strip())
+                    continue
+
                 for line in process.stdout:
                     if self._stop.is_set():
                         process.terminate()
                         break
+                    LOGGER.debug("Meshtastic line: %s", line.strip())
                     record = self._extract_text(line.strip())
                     if record is None:
                         continue
                     raw_text, source = record
+                    LOGGER.info("Received message from %s: %s", source, raw_text)
                     envelope = parse_wbmesh_text(raw_text, source)
                     if envelope is None:
                         envelope = parse_natural_command_text(raw_text, source)
@@ -174,6 +188,7 @@ class MeshListener:
                     self._last_seen_ts = now_ts
 
                     event_id = self.storage.insert_event(asdict(envelope))
+                    LOGGER.info("Stored event %s: %s", event_id, envelope.kind)
                     self.rules.handle_event(event_id, envelope)
             except Exception:
                 LOGGER.exception("Meshtastic listener crashed")
@@ -181,6 +196,9 @@ class MeshListener:
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
+            LOGGER.info("Meshtastic listener already running")
             return
+        LOGGER.info("Starting Meshtastic listener thread")
         self._thread = threading.Thread(target=self.run_forever, daemon=True)
         self._thread.start()
+        LOGGER.info("Meshtastic listener thread started")
